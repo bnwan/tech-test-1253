@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./public/workers",
+    "lib": ["webworker", "es2021"],
+    "noEmit": false
+  },
+  "include": ["src/app/*.worker.ts"]
+}
