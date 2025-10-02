@@ -1,10 +1,10 @@
 import React, { FC, useCallback, useState } from 'react';
 import { GridApi, ICellEditorParams } from 'ag-grid-community';
-import { Cell } from '../libs/Row';
+import { Cell, Row } from '../libs/Row';
 
 interface CellEditorProps {
   params: ICellEditorParams;
-  onChange: (cell: Cell, params: ICellEditorParams<Cell[], Cell>) => void;
+  onChange: (cell: Cell, params: ICellEditorParams<Row, Cell>) => void;
 }
 
 export const CellEditor: FC<CellEditorProps> = ({ params, onChange }) => {

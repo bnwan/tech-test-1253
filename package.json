@@ -28,6 +28,7 @@
     "@types/react-dom": "^19",
     "@types/sharedworker": "^0.0.182",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "worker-loader": "^3.0.8"
   }
 }

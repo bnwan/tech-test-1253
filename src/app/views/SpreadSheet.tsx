@@ -15,37 +15,107 @@ import {
 
 import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-react/';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Cell, Row } from '../libs/Row';
 import { CellEditor } from '../components/CellEditor';
 import { WorkerMessage } from '../libs/WorkerMessage';
+import { getData } from '../libs/getInitialRows';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-const ROWS = 20;
-const alphabet = [...'abcdefghijklmnopqrstuvwxyz'];
+const getGridData = (api?: GridApi) => {
+  const rowData: Row[] = [];
+  api?.forEachNode((node) => rowData.push(node.data));
+  return rowData;
+};
 
 export const SpreadSheet = () => {
-  const [rowData, setRowData] = useState<Row[]>([]);
   const workerRef = useRef<Worker>(undefined);
   const gridApi = useRef<GridApi>(undefined);
+  const channel = new BroadcastChannel('spreadsheet_channel');
   useEffect(() => {
     workerRef.current = new Worker(new URL('../app.spreadsheet.worker.ts', import.meta.url), {
       type: 'module',
       name: 'spreadsheet-worker',
     });
 
+    channel.onmessage = (event) => {
+      const data: WorkerMessage = event.data;
+      console.log('Message received from channel', data);
+
+      if (data.messageType === 'UPDATE_CELL') {
+        const { resultCell: cell, resultColId: colId, resultRowId: rowId } = data.payload;
+
+        const node = gridApi.current?.getRowNode(rowId);
+        if (!node) return;
+        node.setDataValue(colId, cell);
+
+        return;
+      }
+    };
+
     workerRef.current.onmessage = (event) => {
       const data: WorkerMessage = event.data;
       if (data.messageType === 'INIT') {
-        setRowData(data.payload?.rows || []);
+        const data = getData();
+        gridApi.current?.applyTransaction({ add: data });
+        return;
+      }
+
+      if (data.messageType === 'PARSE_FORMULA') {
+        const { parsedFormula, resultCell, resultColId, resultRowId } = data.payload;
+        if (parsedFormula === undefined) return;
+
+        const leftOperand = parsedFormula?.leftOperand;
+        const leftCellRowId = `A${leftOperand?.row}`;
+        const leftCellColId = leftOperand?.column;
+        const rightOperand = parsedFormula?.rightOperand;
+        const rightCellRowId = `A${rightOperand?.row}`;
+        const rightCellColId = rightOperand?.column;
+
+        const leftNode = gridApi.current?.getRowNode(leftCellRowId);
+        const rightNode = gridApi.current?.getRowNode(rightCellRowId);
+        if (!leftNode || !rightNode) return;
+
+        if (leftCellColId === undefined || rightCellColId === undefined) return;
+
+        const leftCell = leftNode.data[leftCellColId];
+        const rightCell = rightNode.data[rightCellColId];
+        if (!leftCell || !rightCell) return;
+        const message: WorkerMessage = {
+          messageType: 'EXECUTE_FORMULA',
+          payload: {
+            resultRowId,
+            resultColId,
+            resultCell,
+            leftCell,
+            rightCell,
+            operator: parsedFormula.operator,
+          },
+        };
+        workerRef.current?.postMessage(message);
+        return;
+      }
+
+      if (data.messageType === 'EXECUTE_FORMULA') {
+        const { result, resultCell, resultColId, resultRowId } = data.payload;
+        if (result === undefined) return;
+
+        const updatedCell: Cell = { ...resultCell, value: result };
+
+        const node = gridApi.current?.getRowNode(resultRowId);
+        if (!node) return;
+
+        node.setDataValue(resultColId, updatedCell);
         return;
       }
 
       if (data.messageType === 'UPDATE_CELL') {
-        console.log('Cell updated from worker', data.payload);
-        if (!data.payload?.row) return;
-        gridApi.current?.applyTransaction({ update: [data.payload.row] });
+        const { resultCell, resultColId, resultRowId } = data.payload;
+        const node = gridApi.current?.getRowNode(resultRowId);
+        if (!node) return;
+        node.setDataValue(resultColId, resultCell);
+        return;
       }
     };
 
@@ -54,24 +124,31 @@ export const SpreadSheet = () => {
     });
   }, []);
 
-  const onChange = useCallback((cell: Cell, params: ICellEditorParams<Cell[], Cell>) => {
-    console.log('Cell change requested:', cell);
+  const onChange = useCallback((cell: Cell, params: ICellEditorParams<Row, Cell>) => {
+    const resultColId = params.column.getColId();
+    const resultRowId = params.node.id;
+    if (!resultRowId) return;
+
+    if (cell.formula === undefined) {
+      params.node.setDataValue(resultColId, cell);
+
+      channel.postMessage({ messageType: 'UPDATE_CELL', payload: { resultColId, resultRowId, resultCell: cell } });
+      return;
+    }
+
     const message: WorkerMessage = {
-      messageType: 'UPDATE_CELL',
-      payload: { row: params.data, cell },
+      messageType: 'PARSE_FORMULA',
+      payload: { resultCell: cell, resultColId, resultRowId },
     };
     workerRef.current?.postMessage(message);
-
-    // params.data[params.colDef.field as string] = cell;
-    // params.node.updateData(params.data);
   }, []);
 
-  const getRowId = useCallback((params: GetRowIdParams<Cell[]>) => {
-    const rowId = params.data['A']?.id;
+  const getRowId = useCallback((params: GetRowIdParams<Row>) => {
+    const rowId = params.data['A'].id;
     return rowId;
   }, []);
 
-  const onGridReady = useCallback((event: GridReadyEvent<Cell[]>) => {
+  const onGridReady = useCallback((event: GridReadyEvent<Row>) => {
     console.log('Grid is ready');
     gridApi.current = event.api;
   }, []);
@@ -83,13 +160,13 @@ export const SpreadSheet = () => {
       resizable: true,
       editable: true,
       enableCellChangeFlash: true,
-      cellRenderer: (params: ICellRendererParams<Cell[], Cell>) => {
+      cellRenderer: (params: ICellRendererParams<Row, Cell>) => {
         return params.value?.value;
       },
-      cellEditor: (params: ICellEditorParams<Cell[], Cell>) => {
+      cellEditor: (params: ICellEditorParams<Row, Cell>) => {
         return <CellEditor params={params} onChange={onChange} />;
       },
-      onCellValueChanged: (params: NewValueParams<Cell[], Cell>) => {
+      onCellValueChanged: (params: NewValueParams<Row, Cell>) => {
         console.log('Cell value changed:', params);
       },
     };
@@ -128,23 +205,6 @@ export const SpreadSheet = () => {
     { field: 'Z', headerName: 'Z', editable: true },
   ];
 
-  // const rows = useMemo(() => {
-  //   const rows: Row[] = [];
-  //   for (let index = 1; index <= ROWS; index++) {
-  //     const items = alphabet.reduce((acc, item) => {
-  //       const letter = item.toUpperCase();
-  //       acc[letter] = {
-  //         id: `${letter}${index}`,
-  //         letter,
-  //       };
-  //       return acc;
-  //     }, {} as Row);
-  //     rows.push(items);
-  //   }
-
-  //   return rows;
-  // }, []);
-
   return (
     <div style={{ height: 500, width: '800px' }}>
       <AgGridReact
@@ -152,7 +212,6 @@ export const SpreadSheet = () => {
         getRowId={getRowId}
         theme={themeBalham}
         columnDefs={colDefs}
-        rowData={rowData}
         defaultColDef={defaultColDef}
       />
     </div>
