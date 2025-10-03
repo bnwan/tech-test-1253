@@ -4,7 +4,6 @@ import {
   AllCommunityModule,
   CellClassParams,
   ColDef,
-  Column,
   GetRowIdParams,
   GridApi,
   GridReadyEvent,
@@ -25,16 +24,6 @@ import { workerOnMessageHandler } from '../libs/handlers/workerOnMessageHandler'
 import { getInitialData, saveRowData } from '../libs/data';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
-
-const flashCell = (gridApi: GridApi, column: Column<Cell>, cell?: Cell | null) => {
-  if (cell === undefined || cell === null || cell.value === undefined) {
-    return;
-  }
-
-  if (cell.value < 0) {
-    gridApi.flashCells({ columns: [column] });
-  }
-};
 
 export const SpreadSheet = () => {
   const workerRef = useRef<Worker>(undefined);
@@ -127,6 +116,17 @@ export const SpreadSheet = () => {
   }, []);
 
   const colDefs: ColDef[] = [
+    {
+      field: 'A',
+      valueGetter: 'node.rowIndex+1',
+      pinned: 'left',
+      width: 30,
+      editable: false,
+      sortable: false,
+      enableCellChangeFlash: false,
+      resizable: false,
+      filter: false,
+    },
     {
       field: 'A',
       headerName: 'A',

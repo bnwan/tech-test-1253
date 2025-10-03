@@ -8,17 +8,13 @@
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
-    "build:workers": "tsc -p tsconfig.worker.json",
-    "watch:workers": "tsc -p tsconfig.worker.json --watch"
+    "start:app": "./dev.sh"
   },
   "dependencies": {
     "ag-grid-react": "^34.2.0",
-    "dexie": "^4.2.0",
-    "dexie-react-hooks": "^4.2.0",
     "next": "15.5.4",
     "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "rxjs": "^7.8.2"
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
@@ -28,7 +24,6 @@
     "@types/react-dom": "^19",
     "@types/sharedworker": "^0.0.182",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "worker-loader": "^3.0.8"
+    "typescript": "^5"
   }
 }
