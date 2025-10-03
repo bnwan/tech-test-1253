@@ -117,7 +117,6 @@ export const SpreadSheet = () => {
 
   const colDefs: ColDef[] = [
     {
-      field: 'A',
       valueGetter: 'node.rowIndex+1',
       pinned: 'left',
       width: 30,
