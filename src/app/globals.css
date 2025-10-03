@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --background: #ffffff;
@@ -23,4 +23,17 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+@keyframes flash {
+  0% {
+    background: red;
+  }
+  100% {
+    background: none;
+  }
+}
+
+.flash-cell {
+  animation: flash 2s;
 }

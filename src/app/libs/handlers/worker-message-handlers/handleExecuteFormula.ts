@@ -1,7 +1,7 @@
 import { GridApi } from 'ag-grid-community';
-import { ExecuteFormulaMessage, UpdatePayload, WorkerMessage } from '../../WorkerMessage';
+import { ExecuteFormulaMessage, UpdatePayload } from '../../WorkerMessage';
 import { Cell } from '../../Row';
-import { saveRowData } from '../../getInitialRows';
+import { saveRowData } from '../../data';
 
 export const handleExecuteFormula = (data: ExecuteFormulaMessage, gridApi: GridApi, channel: BroadcastChannel) => {
   const { result, resultCell, resultColId, resultRowId } = data.payload;

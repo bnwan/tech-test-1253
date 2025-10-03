@@ -7,15 +7,16 @@ const localStorageKey = 'spreadsheet_key';
 export const getInitialData = () => {
   const rows: Row[] = [];
   for (let index = 1; index <= ROWS; index++) {
-    const items = ALPHABET.reduce((acc, item, index) => {
+    const row = ALPHABET.reduce((acc, item) => {
       const letter = item.toUpperCase();
       acc[letter] = {
         id: `${letter}${index}`,
         letter,
       };
+
       return acc;
     }, {} as Row);
-    rows.push(items);
+    rows.push(row);
   }
 
   return rows;

@@ -2,7 +2,9 @@
 
 import {
   AllCommunityModule,
+  CellClassParams,
   ColDef,
+  Column,
   GetRowIdParams,
   GridApi,
   GridReadyEvent,
@@ -10,7 +12,6 @@ import {
   ICellRendererParams,
   ModuleRegistry,
   NewValueParams,
-  ValueGetterParams,
 } from 'ag-grid-community';
 
 import { AgGridReact } from 'ag-grid-react';
@@ -21,9 +22,19 @@ import { CellEditor } from '../components/CellEditor';
 import { UpdatePayload, WorkerMessage } from '../libs/WorkerMessage';
 import { channelOnMessageHandler } from '../libs/handlers/channelOnMessageHandler';
 import { workerOnMessageHandler } from '../libs/handlers/workerOnMessageHandler';
-import { getInitialData, saveRowData } from '../libs/getInitialRows';
+import { getInitialData, saveRowData } from '../libs/data';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
+
+const flashCell = (gridApi: GridApi, column: Column<Cell>, cell?: Cell | null) => {
+  if (cell === undefined || cell === null || cell.value === undefined) {
+    return;
+  }
+
+  if (cell.value < 0) {
+    gridApi.flashCells({ columns: [column] });
+  }
+};
 
 export const SpreadSheet = () => {
   const workerRef = useRef<Worker>(undefined);
@@ -89,6 +100,10 @@ export const SpreadSheet = () => {
     gridApi.current = event.api;
   }, []);
 
+  const flashInvalidCell = useCallback((params: CellClassParams<Row, Cell>) => {
+    return params.value !== undefined && params.value?.value !== undefined && params.value.value < 0;
+  }, []);
+
   const defaultColDef = useMemo<ColDef>(() => {
     return {
       flex: 1,
@@ -96,6 +111,9 @@ export const SpreadSheet = () => {
       resizable: true,
       editable: true,
       enableCellChangeFlash: true,
+      cellClassRules: {
+        'flash-cell': flashInvalidCell,
+      },
       cellRenderer: (params: ICellRendererParams<Row, Cell>) => {
         return params.value?.value;
       },
@@ -109,13 +127,6 @@ export const SpreadSheet = () => {
   }, []);
 
   const colDefs: ColDef[] = [
-    {
-      valueGetter: (params) => {
-        return 1;
-      },
-      width: 30,
-      pinned: 'left',
-    },
     {
       field: 'A',
       headerName: 'A',
