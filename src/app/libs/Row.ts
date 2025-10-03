@@ -5,6 +5,8 @@ export interface Cell {
   formula?: string;
 }
 
-export interface Row {
-  [key: string]: Cell;
-}
+export const ALPHABET = [...'abcdefghijklmnopqrstuvwxyz'] as const;
+
+export type Row = {
+  [K in (typeof ALPHABET)[number]]: Cell;
+};

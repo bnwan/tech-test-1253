@@ -1,18 +1,13 @@
-import { Row } from './Row';
+import { ALPHABET, Row } from './Row';
+import { UpdatePayload } from './WorkerMessage';
 
 const ROWS = 20;
-const alphabet = [...'abcdefghijklmnopqrstuvwxyz'];
 const localStorageKey = 'spreadsheet_key';
 
-export const getData = () => {
-  const data = localStorage.getItem(localStorageKey);
-  if (data) {
-    return JSON.parse(data) as Row[];
-  }
-
+export const getInitialData = () => {
   const rows: Row[] = [];
   for (let index = 1; index <= ROWS; index++) {
-    const items = alphabet.reduce((acc, item) => {
+    const items = ALPHABET.reduce((acc, item, index) => {
       const letter = item.toUpperCase();
       acc[letter] = {
         id: `${letter}${index}`,
@@ -23,11 +18,17 @@ export const getData = () => {
     rows.push(items);
   }
 
-  localStorage.setItem(localStorageKey, JSON.stringify(rows));
-
   return rows;
 };
 
-export const saveData = (rows: Row[]) => {
-  localStorage.setItem(localStorageKey, JSON.stringify(rows));
+export const getRowData = () => {
+  const data = localStorage.getItem(localStorageKey);
+  if (data) {
+    return JSON.parse(data) as UpdatePayload[];
+  }
+};
+
+export const saveRowData = (payload: UpdatePayload) => {
+  const rows = getRowData();
+  localStorage.setItem(localStorageKey, JSON.stringify([...(rows || []), payload]));
 };

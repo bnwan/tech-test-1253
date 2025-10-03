@@ -3,15 +3,17 @@ import { parseFormula } from './libs/parseFormula';
 import { executeFormula } from './libs/executeFormula';
 
 onmessage = (event: MessageEvent<WorkerMessage>) => {
-  console.log('Message received from main script', event.data);
   const { messageType, payload } = event.data;
   if (messageType === 'INIT') {
+    console.log('Initializing worker');
+
     postMessage({ messageType: 'INIT' });
     return;
   }
 
   if (messageType === 'PARSE_FORMULA') {
-    console.log('payload: ', payload);
+    console.log('Parsing formula with payload: ', payload);
+
     const { resultCell } = payload;
     if (resultCell.formula === undefined) return;
     const parsed = parseFormula(resultCell.formula);
@@ -26,7 +28,8 @@ onmessage = (event: MessageEvent<WorkerMessage>) => {
   }
 
   if (messageType === 'EXECUTE_FORMULA') {
-    console.log('payload: ', payload);
+    console.log('Executing formula with payload: ', payload);
+
     const { leftCell, rightCell, operator } = payload;
     if (leftCell === undefined || rightCell === undefined || operator === undefined) return;
     const result = executeFormula({ leftCell, rightCell, operator });
